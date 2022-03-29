@@ -8,7 +8,7 @@ El siguiente proyecto se enfocará en el analisis del rendimiento de las operaci
 
 Berlín Isabel Preciado Escalera
 Jorge Luis Zuñiga
-Luis Enrique
+Luis Enrique Sánchez
 
 -License
 
