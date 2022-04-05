@@ -47,14 +47,14 @@ def f_leer_pip():
 
 def f_pip_size(instrumento: str):
     #Función que devuelve el pip del instrumento solicitado 
-    return 1/archivo_pip.loc[instrumento,"TickSize"]
+    return 1/new_docs_pips.loc[instrumento,"TickSize"]
 
-def f_columnas_pips(posiciones):
+def f_columnas_pips(posiciones,archivo_pip):
     # Añadir el pipsize de cada instrumento
     pip_size = []
     pip = []
     for i in range(len(posiciones)):
-        pip_size.append(f_pip_size(posiciones["Symbol"][i]))
+        pip_size.append(1/archivo_pip.loc[posiciones["Symbol"][i],"TickSize"])
     posiciones["Pip_size"] = pip_size
     # Cantidad de pips resultantes de cada operación 
     for i in range(len(posiciones)):
@@ -112,13 +112,15 @@ def f_estadisticas_ba(posiciones):
     return dict_estadisticas
 
 def f_evolucion_capital(posiciones):
-    tabla=posiciones[['Time', "Profit"]]
-    tabla['Time'] = pd.to_datetime(tabla['Time']) 
-    tabla['Profit'] = pd.to_datetime(tabla['Profit']) 
-    tabla.set_index('Time', inplace=True) #index
-    posiciones3=tabla.resample('D').sum()
-    tabla["Profit_acm_d"] = posiciones["Profit"].cumsum()
-    return posiciones3
+
+    tabla=posiciones[["Opentime","Profit"]]
+    tabla["Opentime"]=pd.to_datetime(tabla["Opentime"])
+    tabla.set_index("Opentime",inplace=True)
+    posiciones3=tabla.resample("D").sum()#Suma diaria
+    tabla["Profit_acm_d"]= tabla["Profit"].cumsum()
+    tabla["cap_acum"] = tabla["Profit_acm_d"] + 100000
+    
+    return posiciones3,tabla
 
 # Función para descargar precios de cierre ajustados:
 def get_adj_closes(tickers, start_date=None, end_date=None):
@@ -133,14 +135,14 @@ def f_estadisticas_mad(tabla):
         #Sharpe original
         retlog = np.log(tabla.Profit_acm_d / tabla.Profit_acm_d.shift()).dropna()
         rp = retlog.mean()
-        sigma = rp.std()
+        sigma = np.array(rp).std()
         #tasa libre de riesgo
-        rf = 0.05
+        rf = 0.05/365
         shor= (rp - rf) / sigma
 
         #Sharpe Actualizado
         # Descarga de datos, se sustituyó el SPY (ETF S&P 500), por DXY (U&S Dollar Index)
-        benchmark = get_adj_closes('SPY', start_date=tabla.index[0], end_date=tabla.index[-1])
+        benchmark = get_adj_closes('SPY', start_date=tabla.Opentime[0], end_date=tabla.iloc[-1,0])
         retlogben = np.log(benchmark / benchmark.shift()).dropna()
         rpbenchmark = retlogben.mean()
         dif_rets = retlog - retlogben
@@ -153,24 +155,24 @@ def f_estadisticas_mad(tabla):
 
         #Drawdown y drawup
 
-        data_min = tabla['profit_acm_d'].min()
-        data_max = tabla['profit_acm_d'].max()
+        data_min = tabla['Profit_acm_d'].min()
+        data_max = tabla['Profit_acm_d'].max()
 
-        posicion_max = tabla['profit_acm_d'].idxmax()
-        posicion_min = tabla['profit_acm_d'].idxmin()
+        posicion_max = tabla['Profit_acm_d'].idxmax()
+        posicion_min = tabla['Profit_acm_d'].idxmin()
 
-        fecha_max = tabla['time'][posicion_max]
-        fecha_min = tabla['time'][posicion_min]
+        fecha_max = tabla['Opentime'][posicion_max]
+        fecha_min = tabla['Opentime'][posicion_min]
 
         if fecha_max > fecha_min:
-            fecha_inicial_dd = tabla.loc[0, 'time']
+            fecha_inicial_dd = tabla.loc[0, 'Opentime']
             fecha_final_dd = fecha_min
-            fecha_inicial_du = tabla['time'][posicion_min]
+            fecha_inicial_du = tabla['Opentime'][posicion_min]
             fecha_final_du = fecha_max
         else:
-            fecha_inicial_du = tabla.loc[0, 'time']
+            fecha_inicial_du = tabla.loc[0, 'Opentime']
             fecha_final_du = fecha_max
-            fecha_inicial_dd = tabla['time'][posicion_max]
+            fecha_inicial_dd = tabla['Opentime'][posicion_max]
             fecha_final_dd = fecha_min
 
         estadisticas = pd.DataFrame()
@@ -185,7 +187,7 @@ def f_estadisticas_mad(tabla):
         'Fecha final del DrawDown de Capital', 'Máxima pérdida flotante registrada', 'Fecha inicial del DrawUp de Capital', 
         'Fecha final del DrawUp de Capital', 'Máxima ganancia flotante registrada']
         
-        tabla.set_index('time', inplace=True)
+        tabla.set_index('Opentime', inplace=True)
         
         return estadisticas
 
