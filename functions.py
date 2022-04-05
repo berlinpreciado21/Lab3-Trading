@@ -7,6 +7,7 @@ import collections
 import pandas_datareader.data as web
 # Se importa la librería para importar los historiales de metatraderfrom datetime import datetime
 import MetaTrader5 as mt5
+import plotly.graph_objects as go
 
 def f_leer_archivo(nombre):
     # Numero de posiciones que tuviste debe de ser cambiado manualmente por cada usuario
@@ -283,3 +284,24 @@ def f_be_de(param_data):
     resultados = pd.DataFrame([[ocurrencias,status_quo,aversion,0]],columns=['ocurrencias','status_quo','aversion_perdida','sensibilidad_decreciente'])
     dictionario["Resultados"] = {"dataframe" : resultados}        
     return dictionario
+
+def pastel_graph(dict_estadisticas):
+
+    labels = dict_estadisticas["Symbol"].to_list()
+    values =dict_estadisticas["Rank"].to_list()
+
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values, pull=[0, 0, 0.2, 0])])
+    fig.update_layout(
+        title_text="Ranking de las Operaciones de Trading")
+
+    return fig.show()
+
+def bar_chart(resultados):
+    sq=resultados["Resultados"]["dataframe"]["status_quo"]
+    av=resultados["Resultados"]["dataframe"]["aversion_perdida"]
+    sd=resultados["Resultados"]["dataframe"]["sensibilidad_decreciente"]
+    x = ["Status Quo", "Aversión a la pérdida", "Sensibilidad decreciente"]
+    y = [sum(sq), sum(av), sum(sd)]
+    fig = go.Figure([go.Bar(x=x, y=y)])
+    fig.update_layout(title='Disposition Effect', xaxis_title='Sesgos', yaxis_title='Cantidad de ocurrencias')
+    return fig
