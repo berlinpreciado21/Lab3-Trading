@@ -135,8 +135,8 @@ def f_estadisticas_mad(tabla):
           
         #Sharpe original
         retlog = np.log(tabla.Profit_acm_d / tabla.Profit_acm_d.shift()).dropna()
-        rp = retlog.mean()
-        sigma = np.array(rp).std()
+        rp = np.mean(retlog)
+        sigma = np.array(retlog).std()
         #tasa libre de riesgo
         rf = 0.05/365
         shor= (rp - rf) / sigma
